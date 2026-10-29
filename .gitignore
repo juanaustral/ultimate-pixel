@@ -5,3 +5,4 @@ build.log
 .keystore/
 dist-android/
 *.log
+node_modules/

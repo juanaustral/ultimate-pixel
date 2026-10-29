@@ -7,8 +7,9 @@ docker build -t ultimate-pixel-tauri-android -f "$D/Dockerfile.android" "$D"
 docker run --rm -v "$D":/app -v up-tauri-cargo:/usr/local/cargo/registry -v up-gradle:/root/.gradle \
   ultimate-pixel-tauri-android bash -c '
   set -e; cd /app
-  [ -d src-tauri/gen/android ] || tauri android init --ci
-  tauri android build --apk --target aarch64 --ci
+  npm install --no-audit --no-fund >/dev/null
+  [ -d src-tauri/gen/android ] || npm run tauri -- android init --ci
+  npm run tauri -- android build --apk --target aarch64 --ci
   [ -f /app/.keystore/test.jks ] || { mkdir -p /app/.keystore; keytool -genkeypair -keystore /app/.keystore/test.jks -alias up -keyalg RSA -keysize 2048 -validity 3650 -storepass prueba123 -keypass prueba123 -dname "CN=Ultimate Pixel prueba" >/dev/null; }
   IN=$(find src-tauri/gen/android -name "*release-unsigned.apk" | head -1)
   mkdir -p dist-android
