@@ -1,0 +1,5 @@
+web/
+src-tauri/target/
+src-tauri/gen/
+captura.png
+build.log
