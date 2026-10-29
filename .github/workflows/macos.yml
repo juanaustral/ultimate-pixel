@@ -1,0 +1,19 @@
+name: macOS
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - run: npm install -g @tauri-apps/cli@2
+      - run: tauri build --target universal-apple-darwin --bundles dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ultimate-pixel-macos
+          path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg

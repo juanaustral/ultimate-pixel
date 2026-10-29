@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Ultimate Pixel: juego de Ultimate Frisbee en pixel art para navegador</title>
+  <meta name="description" content="Juego de Ultimate Frisbee en pixel art para jugar en el navegador, en la compu o el celular. Reglas fieles al reglamento WFDF 2025-2028, partidos completos y ranking.">
+  <meta name="author" content="Juan Martínez García">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://iona.ar/ultimatepixel/">
+  <!-- como app (agregado a la pantalla de inicio) abre sin las barras del navegador: en iPhone es
+       la única forma de jugar en pantalla completa -->
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ultimate Pixel">
+  <meta name="application-name" content="Ultimate Pixel">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:site_name" content="IONA">
+  <meta property="og:title" content="Ultimate Pixel: juego de Ultimate Frisbee en pixel art">
+  <meta property="og:description" content="Jugá Ultimate Frisbee en pixel art desde el navegador, con reglas fieles al reglamento WFDF 2025-2028.">
+  <meta property="og:url" content="https://iona.ar/ultimatepixel/">
+  <meta property="og:image" content="https://iona.ar/ultimatepixel/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Ultimate Pixel: jugadores de pixel art en una cancha de Ultimate Frisbee vista desde arriba.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Ultimate Pixel: juego de Ultimate Frisbee en pixel art">
+  <meta name="twitter:description" content="Jugá Ultimate Frisbee en pixel art desde el navegador, con reglas fieles al reglamento WFDF 2025-2028.">
+  <meta name="twitter:image" content="https://iona.ar/ultimatepixel/og-image.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "Ultimate Pixel",
+    "url": "https://iona.ar/ultimatepixel/",
+    "description": "Videojuego de Ultimate Frisbee en pixel art para navegador, fiel al reglamento WFDF 2025-2028.",
+    "image": "https://iona.ar/ultimatepixel/og-image.png",
+    "genre": ["Sports", "Ultimate Frisbee"],
+    "gamePlatform": "Web Browser",
+    "applicationCategory": "Game",
+    "inLanguage": "es",
+    "author": {
+      "@type": "Person",
+      "name": "Juan Martínez García",
+      "url": "https://juanmartinezgarcia.com"
+    }
+  }
+  </script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0d1117; overflow: hidden; }
+    #game { width: 100%; height: 100%; }
+    canvas { image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
+    body { touch-action: none; -webkit-user-select: none; user-select: none; }
+    .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  </style>
+  <script type="module" crossorigin src="./assets/index-CZu_U2uw.js"></script>
+</head>
+<body>
+  <h1 class="sr-only">Ultimate Pixel, juego de Ultimate Frisbee en pixel art para navegador</h1>
+  <noscript>
+    <p>Ultimate Pixel es un juego de Ultimate Frisbee en pixel art que se juega en el navegador. Para jugar hace falta activar JavaScript.</p>
+  </noscript>
+  <div id="game"></div>
+</body>
+</html>

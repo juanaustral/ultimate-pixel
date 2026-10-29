@@ -3,17 +3,42 @@
   "productName": "Ultimate Pixel",
   "version": "0.2.0",
   "identifier": "ar.iona.ultimatepixel",
-  "build": { "frontendDist": "../web" },
+  "build": {
+    "frontendDist": "../web"
+  },
   "app": {
-    "windows": [{ "title": "Ultimate Pixel", "width": 1280, "height": 720, "resizable": true }],
-    "security": { "csp": null }
+    "windows": [
+      {
+        "title": "Ultimate Pixel",
+        "width": 1280,
+        "height": 720,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "appimage"],
+    "targets": "all",
     "category": "Game",
     "shortDescription": "Ultimate frisbee en pixel art",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png"],
-    "linux": { "deb": { "depends": [] } }
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.icns"
+    ],
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    },
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "11.0"
+    }
   }
 }

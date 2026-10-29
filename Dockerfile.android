@@ -1,0 +1,11 @@
+FROM ultimate-pixel-tauri-build
+RUN apt-get update && apt-get install -y --no-install-recommends openjdk-17-jdk-headless unzip \
+  && rm -rf /var/lib/apt/lists/*
+ENV ANDROID_HOME=/opt/android-sdk JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+RUN mkdir -p $ANDROID_HOME/cmdline-tools && cd /tmp \
+  && curl -sLo clt.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip \
+  && unzip -q clt.zip && mv cmdline-tools $ANDROID_HOME/cmdline-tools/latest && rm clt.zip \
+  && yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null \
+  && $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;27.2.12479018" >/dev/null
+ENV NDK_HOME=/opt/android-sdk/ndk/27.2.12479018 PATH=$PATH:/opt/android-sdk/build-tools/34.0.0
+RUN rustup target add aarch64-linux-android armv7-linux-androideabi
