@@ -12,6 +12,12 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde_json = "1"   # lo usa generate_context! con la configuración de los plugins
+
+# actualizador: solo escritorio (en Android el APK nuevo se abre con opener)
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
 
 [profile.release]
 opt-level = "s"

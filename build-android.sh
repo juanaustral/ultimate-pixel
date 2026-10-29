@@ -17,6 +17,10 @@ docker run --rm --env-file $S/android-release.env -e VERSION="$VERSION" -v "$D":
   # init deja el ícono de Tauri: se pisan con los del juego (tauri icon los genera en icons/android)
   cp -r src-tauri/icons/android/. src-tauri/gen/android/app/src/main/res/
   sed -i "s/#FFFFFF/#4FA457/" src-tauri/gen/android/app/src/main/res/values/ic_launcher_background.xml   # verde de la cancha
+  # horizontal (para los dos lados) y pantalla completa inmersiva
+  M=src-tauri/gen/android/app/src/main
+  grep -q screenOrientation $M/AndroidManifest.xml || sed -i "0,/<activity/s//<activity android:screenOrientation=\"sensorLandscape\"/" $M/AndroidManifest.xml
+  cp android/MainActivity.kt "$(find $M/java -name MainActivity.kt)"
   npm run tauri -- android build --apk --target aarch64 --ci
   IN=$(find src-tauri/gen/android -name "*release-unsigned.apk" | head -1)
   mkdir -p dist-android

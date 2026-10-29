@@ -14,7 +14,11 @@ jobs:
       - run: bash check-version.sh   # la app tiene que llevar la versión del juego
       - run: npm install -g @tauri-apps/cli@2
       - run: tauri build --target universal-apple-darwin --bundles dmg
+      # para el actualizador: la .app comprimida (la firma la agrega release.sh en el VPS)
+      - run: tar -czf "UltimatePixel.app.tar.gz" -C "src-tauri/target/universal-apple-darwin/release/bundle/macos" "Ultimate Pixel.app"
       - uses: actions/upload-artifact@v4
         with:
           name: ultimate-pixel-macos
-          path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          path: |
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            UltimatePixel.app.tar.gz
