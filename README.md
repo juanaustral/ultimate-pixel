@@ -1,23 +1,88 @@
-# Ultimate Pixel — escritorio (prueba con Tauri 2, Linux)
+<p align="center">
+  <img src="docs/img/icono.png" width="96" alt="Ícono de Ultimate Pixel: un frisbee sobre la cancha">
+</p>
 
-Proyecto aparte: empaqueta el build web de `/opt/ultimate-pixel` sin modificar ese repo.
+<h1 align="center">Ultimate Pixel</h1>
 
-- `build.sh`: compila el web (Vite) a `web/` y arma el instalador dentro de Docker (no instala nada en el VPS).
-- Salida: `src-tauri/target/release/bundle/` (`deb/` y `appimage/`).
+<p align="center">
+  <b>Ultimate Frisbee en pixel art.</b> Partidos 7 contra 7 con las reglas WFDF 2025-2028,<br>
+  contra la computadora o contra otra persona por internet.
+</p>
 
-Limitación conocida: ranking, equipos guardados, cuentas y online usan `api/` relativo a la página;
-en la app no hay servidor, así que solo anda el juego sin conexión.
+<p align="center">
+  <a href="https://github.com/juanaustral/ultimate-pixel/releases/latest"><b>Descargar</b></a> ·
+  <a href="https://iona.ar/ultimatepixel/"><b>Jugar en el navegador</b></a> ·
+  <a href="#cómo-se-juega">Cómo se juega</a>
+</p>
 
-## Otras plataformas
-- Android (APK arm64, Pixel 3a): `build-android.sh` (Docker con SDK/NDK). Firma de prueba en `.keystore/` (fuera de git).
-- macOS (DMG universal, firma ad-hoc, sin notarizar): GitHub Actions `.github/workflows/macos.yml` en el repo privado `juanaustral/ultimate-pixel-desktop`.
-  `web/` va en git para que el runner no necesite el repo del juego. Regenerarlo con `build.sh` antes de cada push.
+![Pantalla de título de Ultimate Pixel](docs/img/titulo.png)
 
-## Publicar una versión (`release.sh`)
+## Descargar
 
-`./release.sh "notas"` arma el APK firmado en el VPS, empuja `web/` y la versión, espera el DMG de GitHub Actions, firma la `.app` para el actualizador y publica todo en `https://iona.ar/ultimatepixel/app/`. Después escribe `/opt/ultimate-pixel-data/app-latest.json`, que la API sirve en `api/app/latest`: las apps instaladas muestran NUEVA ACTUALIZACIÓN en el menú.
+| Plataforma | Descarga | Notas |
+|---|---|---|
+| **Android** | [UltimatePixel-Android.apk](https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Android.apk) | Teléfonos de 64 bits (arm64), Android 7 o más nuevo. |
+| **Mac** | [UltimatePixel-Mac.dmg](https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Mac.dmg) | Intel y Apple Silicon, macOS 11 o más nuevo. |
+| **Linux** | [AppImage](https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Linux.AppImage) · [.deb](https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Linux.deb) | x86_64. El .deb es para Debian y Ubuntu. |
+| **Windows, iPhone y cualquier otra** | [iona.ar/ultimatepixel](https://iona.ar/ultimatepixel/) | Se juega en el navegador, sin instalar nada. |
 
-- La versión de la app es siempre la del juego (`prepare-web.sh`; `check-version.sh` corta el build si no coinciden).
-- Claves en `/opt/ultimate-pixel-secrets` (fuera de git, en el backup cifrado): `android-release.jks` firma el APK (no cambiarla nunca: Android no deja instalar encima una app firmada con otra) y `updater.key` firma las actualizaciones de Mac. Ninguna clave va a GitHub.
-- Mac: el actualizador de Tauri baja, verifica la firma, instala y reinicia. Android: abre el APK nuevo y el sistema ofrece instalarlo (o la tienda, si `store.android` está cargado en `app-latest.json`).
-- Android abre horizontal y en pantalla completa inmersiva (`android/MainActivity.kt`, copiada por `build-android.sh`).
+Todas las versiones anteriores están en [Releases](https://github.com/juanaustral/ultimate-pixel/releases).
+
+### Instalar
+
+**Android.** Bajá el APK y abrilo. La primera vez el teléfono pide permiso para instalar apps de esa fuente: aceptalo (Ajustes > Instalar apps desconocidas). El juego abre en horizontal y a pantalla completa.
+
+**Mac.** Abrí el DMG y arrastrá *Ultimate Pixel* a Aplicaciones. Todavía no está firmado por Apple, así que la primera vez macOS lo bloquea: andá a **Ajustes del Sistema > Privacidad y seguridad** y tocá **Abrir igual**. Después abre normal.
+
+**Linux.** AppImage: `chmod +x UltimatePixel-Linux.AppImage` y abrilo. Debian/Ubuntu: `sudo apt install ./UltimatePixel-Linux.deb`.
+
+### Actualizaciones
+
+La app avisa sola cuando sale una versión nueva: aparece **NUEVA ACTUALIZACIÓN** en el menú. En Mac, con un toque se baja, se instala y se reinicia. En Android abre el APK nuevo y el teléfono ofrece instalarlo encima. Tus equipos, tu nombre y tus partidos se conservan.
+
+## El juego
+
+![Partido en curso: marcador, minimapa y el lanzador apuntando](docs/img/partido.png)
+
+- **Ultimate de verdad.** Reglamento WFDF 2025-2028: pull, cuenta de stalling, turnovers, gol en la zona, marca con lado del forehand o del backhand, stack vertical y horizontal.
+- **Mixto, 7 contra 7.** Planteles de 8 con rotación por puntos jugados; cada punto juegan 4 y 3, como en la Regla A.
+- **Tres dificultades** contra la computadora, y partidos de 5, 10, 15 o 20 minutos o con tiempo reglamentario.
+- **Online.** Desafiá a otra persona por internet desde el lobby: cada uno lleva su equipo.
+- **Ranking** de partidos ganados por dificultad, con cuenta y contraseña.
+- **Armá tu equipo:** nombre, sigla, colores, camiseta y plantel con nombres. También hay equipos para elegir, hechos por otros jugadores.
+- **Tutorial** paso a paso: pases, volada, marca y cómo se cuenta el gol.
+- **Sin conexión también.** Si no hay internet, la app pregunta si querés jugar OFFLINE: anda todo menos el online, y tus partidos suben al ranking cuando vuelve la conexión.
+- **Sonido y música hechos en código:** efectos de partido, público y tres temas chiptune.
+- En **español e inglés**; con teclado y mouse o con controles táctiles.
+
+| | |
+|---|---|
+| ![¡Gol! con el nombre de la jugadora que atrapó](docs/img/gol.png) | ![Partido en un teléfono con controles táctiles](docs/img/telefono.png) |
+| ![Pantalla de carga con el frisbee y la barra de avance](docs/img/carga.png) | ![Sin conexión: el juego pregunta si jugar OFFLINE](docs/img/offline.png) |
+
+## Cómo se juega
+
+| Acción | Teclado y mouse | Táctil |
+|---|---|---|
+| Moverse | W A S D | Palanca izquierda |
+| Lanzar | Apuntá con el mouse; mantené clic o Espacio y soltá (más carga, más lejos; la barra naranja es un tiro flotado) | La palanca apunta; mantené ● y soltá |
+| Volada (sin el disco, corriendo) o brazos (marcando) | Espacio | ● |
+| Sprint corto (se gasta y se recarga) | Shift | Botón de explosión |
+| Cambiar de jugador | Tab | ⇄ |
+| Pantalla completa | F | Botón de la esquina |
+
+Los botones táctiles se pueden mover a donde te queden cómodos (menú > Controles).
+
+El tutorial del menú lo explica en la cancha.
+
+## Créditos
+
+Hecho por **Juan Martínez García** · [juanmartinezgarcia.com](https://juanmartinezgarcia.com)
+
+Conocé a **Ultimate Mendoza**: [@ultimatefrisbeemza](https://www.instagram.com/ultimatefrisbeemza/)
+
+Todo el arte, la música y los efectos se hicieron para este juego.
+
+---
+
+Este repositorio publica las apps (Android, Mac y Linux, hechas con [Tauri 2](https://tauri.app)). El código del juego está en un repositorio privado. Cómo se compilan y se publican las versiones: [docs/COMPILAR.md](docs/COMPILAR.md).
