@@ -3,8 +3,8 @@
 #   ./release.sh "notas de la versión"
 # 1. Linux (build.sh) y APK firmado (build-android.sh) en el VPS; los dos arman web/ y fijan la
 #    versión del juego.
-# 2. Mac en GitHub Actions: commit y push de web/ y la versión, espera el run de ese commit y baja
-#    el DMG y la .app comprimida.
+# 2. Mac y Windows en GitHub Actions: commit y push de web/ y la versión, espera los runs de ese
+#    commit y baja el DMG, la .app comprimida y el instalador de Windows.
 # 3. Firma la .app para el actualizador con la clave de /opt/ultimate-pixel-secrets (no sale del VPS).
 # 4. Copia todo a iona.ar/ultimatepixel/app/ y escribe app-latest.json (lo sirve api/app/latest).
 # 5. Crea el Release vX.Y.Z en github.com/juanaustral/ultimate-pixel (público) con nombres fijos,
@@ -33,51 +33,61 @@ git add web src-tauri/tauri.conf.json
 git diff --cached --quiet || git commit -qm "Versión $V"
 git push -q origin main
 SHA=$(git rev-parse HEAD)
-echo "esperando el build de Mac de $SHA..."
-RUN=""
-for _ in $(seq 1 360); do                       # hasta 3 horas (los runners de Mac a veces hacen cola)
-  RUN=$(gh run list --commit "$SHA" --workflow macOS --json databaseId -q '.[0].databaseId' 2>/dev/null || true)
-  if [ -n "$RUN" ]; then
-    ST=$(gh run view "$RUN" --json status,conclusion -q '.status + " " + .conclusion')
-    case "$ST" in
-      "completed success") break ;;
-      "completed cancelled") echo "run $RUN cancelado: se relanza"; gh run rerun "$RUN" ;;
-      completed*) echo "el build de Mac falló: $ST (run $RUN)" >&2; exit 1 ;;
-    esac
-  fi
-  sleep 30
-done
-[ "$(gh run view "$RUN" --json conclusion -q .conclusion)" = success ] || { echo "el build de Mac no terminó" >&2; exit 1; }
-gh run download "$RUN" -n ultimate-pixel-macos -D "$TMP"
-DMG=$(find "$TMP" -name '*.dmg' | head -1)
-TGZ=$(find "$TMP" -name 'UltimatePixel.app.tar.gz' | head -1)
-[ -n "$DMG" ] && [ -n "$TGZ" ] || { echo "faltan el DMG o la .app en el run $RUN" >&2; exit 1; }
+# espera el run de un workflow para este commit y baja su artefacto en $TMP/<artefacto>
+fetch_build() {   # fetch_build <workflow> <artefacto>
+  local wf=$1 art=$2 run="" st=""
+  echo "esperando el build de $wf de $SHA..."
+  for _ in $(seq 1 360); do                     # hasta 3 horas (los runners de Mac a veces hacen cola)
+    run=$(gh run list --commit "$SHA" --workflow "$wf" --json databaseId -q '.[0].databaseId' 2>/dev/null || true)
+    if [ -n "$run" ]; then
+      st=$(gh run view "$run" --json status,conclusion -q '.status + " " + .conclusion')
+      case "$st" in
+        "completed success") break ;;
+        "completed cancelled") echo "run $run cancelado: se relanza"; gh run rerun "$run" ;;
+        completed*) echo "el build de $wf falló: $st (run $run)" >&2; exit 1 ;;
+      esac
+    fi
+    sleep 30
+  done
+  [ "$st" = "completed success" ] || { echo "el build de $wf no terminó" >&2; exit 1; }
+  gh run download "$run" -n "$art" -D "$TMP/$art"
+}
+fetch_build macOS ultimate-pixel-macos
+fetch_build Windows ultimate-pixel-windows
+DMG=$(find "$TMP/ultimate-pixel-macos" -name '*.dmg' | head -1)
+TGZ=$(find "$TMP/ultimate-pixel-macos" -name 'UltimatePixel.app.tar.gz' | head -1)
+EXE=$(find "$TMP/ultimate-pixel-windows" -name '*-setup.exe' | head -1)
+[ -n "$DMG" ] && [ -n "$TGZ" ] && [ -n "$EXE" ] || { echo "faltan el DMG, la .app o el instalador de Windows" >&2; exit 1; }
+cp "$EXE" "$TMP/UltimatePixel-setup.exe"
 
 cp "$APPIMG" "$TMP/UltimatePixel.AppImage"
 sign() {   # firma para el actualizador (deja <archivo>.sig al lado)
   docker run --rm --env-file "$S/updater.env" -v "$S/updater.key":/k/updater.key:ro -v "$(dirname "$1")":/w \
     ultimate-pixel-tauri-build tauri signer sign -f /k/updater.key "/w/$(basename "$1")" >/dev/null
 }
-sign "$TGZ"; sign "$TMP/UltimatePixel.AppImage"
+sign "$TGZ"; sign "$TMP/UltimatePixel.AppImage"; sign "$TMP/UltimatePixel-setup.exe"
 SIG=$(cat "$TGZ.sig")
 SIG_LINUX=$(cat "$TMP/UltimatePixel.AppImage.sig")
+SIG_WIN=$(cat "$TMP/UltimatePixel-setup.exe.sig")
 
 mkdir -p "$PUB"
 cp "$APK" "$PUB/UltimatePixel-$V-arm64.apk"
 cp "$DMG" "$PUB/UltimatePixel-$V-mac.dmg"
 cp "$TGZ" "$PUB/UltimatePixel-$V-mac.app.tar.gz"
 cp "$APPIMG" "$PUB/UltimatePixel-$V-linux.AppImage"
+cp "$EXE" "$PUB/UltimatePixel-$V-windows-setup.exe"
 
-python3 - "$LATEST" "$V" "$NOTES" "$URL" "$SIG" "$SIG_LINUX" <<'EOF'
+python3 - "$LATEST" "$V" "$NOTES" "$URL" "$SIG" "$SIG_LINUX" "$SIG_WIN" <<'EOF'
 import json, os, sys, datetime
-path, v, notes, url, sig, sig_linux = sys.argv[1:]
+path, v, notes, url, sig, sig_linux, sig_win = sys.argv[1:]
 mac = {"signature": sig, "url": f"{url}/UltimatePixel-{v}-mac.app.tar.gz"}
 linux = {"signature": sig_linux, "url": f"{url}/UltimatePixel-{v}-linux.AppImage"}
+win = {"signature": sig_win, "url": f"{url}/UltimatePixel-{v}-windows-setup.exe"}
 data = {
     "version": v,
     "notes": notes,
     "pub_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "platforms": {"darwin-aarch64": mac, "darwin-x86_64": mac, "linux-x86_64": linux},
+    "platforms": {"darwin-aarch64": mac, "darwin-x86_64": mac, "linux-x86_64": linux, "windows-x86_64": win},
     "android": {"url": f"{url}/UltimatePixel-{v}-arm64.apk"},
     "store": {"android": "", "ios": ""},
 }
@@ -108,9 +118,10 @@ cp "$APK" "$GH/UltimatePixel-Android.apk"
 cp "$DMG" "$GH/UltimatePixel-Mac.dmg"
 cp "$APPIMG" "$GH/UltimatePixel-Linux.AppImage"
 cp "$DEB" "$GH/UltimatePixel-Linux.deb"
+cp "$EXE" "$GH/UltimatePixel-Windows.exe"
 BODY="${NOTES:-Ultimate Pixel $V}
 
-Android: UltimatePixel-Android.apk · Mac (Intel y Apple Silicon): UltimatePixel-Mac.dmg · Linux: AppImage o .deb.
+Android: UltimatePixel-Android.apk · Windows: UltimatePixel-Windows.exe · Mac (Intel y Apple Silicon): UltimatePixel-Mac.dmg · Linux: AppImage o .deb.
 Cómo instalar: https://github.com/juanaustral/ultimate-pixel#instalar"
 if gh release view "v$V" -R juanaustral/ultimate-pixel >/dev/null 2>&1; then
   gh release upload "v$V" "$GH"/* --clobber -R juanaustral/ultimate-pixel
@@ -118,7 +129,7 @@ else
   gh release create "v$V" "$GH"/* --title "Ultimate Pixel $V" --notes "$BODY" --target "$SHA" -R juanaustral/ultimate-pixel
 fi
 
-for f in "UltimatePixel-$V-arm64.apk" "UltimatePixel-$V-mac.dmg" "UltimatePixel-$V-mac.app.tar.gz" "UltimatePixel-$V-linux.AppImage"; do
+for f in "UltimatePixel-$V-arm64.apk" "UltimatePixel-$V-mac.dmg" "UltimatePixel-$V-mac.app.tar.gz" "UltimatePixel-$V-linux.AppImage" "UltimatePixel-$V-windows-setup.exe"; do
   [ "$(curl -s -o /dev/null -w '%{http_code}' "$URL/$f")" = 200 ] || { echo "no responde $URL/$f" >&2; exit 1; }
 done
 [ "$(curl -s https://iona.ar/ultimatepixel/api/app/latest | python3 -c 'import json,sys;print(json.load(sys.stdin)["version"])')" = "$V" ] \

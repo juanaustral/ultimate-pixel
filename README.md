@@ -22,9 +22,10 @@
 | Plataforma | Descarga | Notas |
 |---|---|---|
 | **Android** | [UltimatePixel-Android.apk](https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Android.apk) | Teléfonos de 64 bits (arm64), Android 7 o más nuevo. |
+| **Windows** | [UltimatePixel-Windows.exe](https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Windows.exe) | Windows 10 y 11, 64 bits. |
 | **Mac** | [UltimatePixel-Mac.dmg](https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Mac.dmg) | Intel y Apple Silicon, macOS 11 o más nuevo. |
 | **Linux** | [AppImage](https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Linux.AppImage) · [.deb](https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Linux.deb) | x86_64. El .deb es para Debian y Ubuntu. |
-| **Windows, iPhone y cualquier otra** | [iona.ar/ultimatepixel](https://iona.ar/ultimatepixel/) | Se juega en el navegador, sin instalar nada. |
+| **iPhone y cualquier otra** | [iona.ar/ultimatepixel](https://iona.ar/ultimatepixel/) | Se juega en el navegador, sin instalar nada. |
 
 Todas las versiones anteriores están en [Releases](https://github.com/juanaustral/ultimate-pixel/releases).
 
@@ -32,13 +33,15 @@ Todas las versiones anteriores están en [Releases](https://github.com/juanaustr
 
 **Android.** Bajá el APK y abrilo. La primera vez el teléfono pide permiso para instalar apps de esa fuente: aceptalo (Ajustes > Instalar apps desconocidas). El juego abre en horizontal y a pantalla completa.
 
+**Windows.** Bajá el instalador y abrilo. Todavía no está firmado por Microsoft, así que Windows puede mostrar "Windows protegió tu PC": tocá **Más información > Ejecutar de todas formas**. Se instala para tu usuario, sin pedir permisos de administrador.
+
 **Mac.** Abrí el DMG y arrastrá *Ultimate Pixel* a Aplicaciones. Todavía no está firmado por Apple, así que la primera vez macOS lo bloquea: andá a **Ajustes del Sistema > Privacidad y seguridad** y tocá **Abrir igual**. Después abre normal.
 
 **Linux.** AppImage: `chmod +x UltimatePixel-Linux.AppImage` y abrilo. Debian/Ubuntu: `sudo apt install ./UltimatePixel-Linux.deb`.
 
 ### Actualizaciones
 
-La app avisa sola cuando sale una versión nueva: aparece **NUEVA ACTUALIZACIÓN** en el menú. En Mac, con un toque se baja, se instala y se reinicia. En Android abre el APK nuevo y el teléfono ofrece instalarlo encima. Tus equipos, tu nombre y tus partidos se conservan.
+La app avisa sola cuando sale una versión nueva: aparece **NUEVA ACTUALIZACIÓN** en el menú. En Windows, Mac y Linux (AppImage), con un toque se baja, se instala y se reinicia. En Android abre el APK nuevo y el teléfono ofrece instalarlo encima.
 
 ## El juego
 
@@ -85,4 +88,4 @@ Todo el arte, la música y los efectos se hicieron para este juego.
 
 ---
 
-Este repositorio publica las apps (Android, Mac y Linux, hechas con [Tauri 2](https://tauri.app)). El código del juego está en un repositorio privado. Cómo se compilan y se publican las versiones: [docs/COMPILAR.md](docs/COMPILAR.md).
+Este repositorio publica las apps (Android, Windows, Mac y Linux, hechas con [Tauri 2](https://tauri.app)). El código del juego está en un repositorio privado. Cómo se compilan y se publican las versiones: [docs/COMPILAR.md](docs/COMPILAR.md).
