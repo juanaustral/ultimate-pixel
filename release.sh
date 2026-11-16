@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Publica una versión de la app y avisa a los que la tienen instalada (NUEVA ACTUALIZACIÓN).
 #   ./release.sh "notas de la versión"
-# 1. Linux (build.sh) y APK firmado (build-android.sh) en el VPS; los dos arman web/ y fijan la
-#    versión del juego.
-# 2. Mac y Windows en GitHub Actions: commit y push de web/ y la versión, espera los runs de ese
-#    commit y baja el DMG, la .app comprimida y el instalador de Windows.
+# 1. prepare-web.sh arma web/ y fija la versión del juego (lo único que se compila en el VPS).
+# 2. Todas las plataformas en GitHub Actions: commit y push de web/ y la versión, espera los runs de
+#    ese commit y baja el DMG y la .app (Mac), el instalador (Windows), AppImage y .deb (Linux) y el
+#    APK firmado (Android; la clave está en los secretos del repo).
 # 3. Firma la .app para el actualizador con la clave de /opt/ultimate-pixel-secrets (no sale del VPS).
 # 4. Copia todo a iona.ar/ultimatepixel/app/ y escribe app-latest.json (lo sirve api/app/latest).
 # 5. Crea el Release vX.Y.Z en github.com/juanaustral/ultimate-pixel (público) con nombres fijos,
@@ -19,14 +19,9 @@ ENTREGA=/opt/iona-web/site/entregas/78c383a9f09573f4ee40ed0f   # link de prueba 
 NOTES=${1:-}
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 
-bash "$D/build.sh"
-bash "$D/build-android.sh"
+bash "$D/prepare-web.sh"
 V=$(cat "$D/web/app-version.txt")
-APK="$D/dist-android/UltimatePixel-$V-arm64.apk"
-B="$D/src-tauri/target/release/bundle"
-APPIMG="$B/appimage/Ultimate Pixel_${V}_amd64.AppImage"
-DEB="$B/deb/Ultimate Pixel_${V}_amd64.deb"
-for f in "$APK" "$APPIMG" "$DEB"; do [ -f "$f" ] || { echo "no está $f" >&2; exit 1; }; done
+[ -x "$D/node_modules/.bin/tauri" ] || (cd "$D" && npm ci --no-audit --no-fund >/dev/null)   # para firmar
 
 cd "$D"
 git add web src-tauri/tauri.conf.json
@@ -54,6 +49,12 @@ fetch_build() {   # fetch_build <workflow> <artefacto>
 }
 fetch_build macOS ultimate-pixel-macos
 fetch_build Windows ultimate-pixel-windows
+fetch_build Linux ultimate-pixel-linux
+fetch_build Android ultimate-pixel-android
+APK=$(find "$TMP/ultimate-pixel-android" -name "UltimatePixel-$V-arm64.apk" | head -1)
+APPIMG=$(find "$TMP/ultimate-pixel-linux" -name '*.AppImage' | head -1)
+DEB=$(find "$TMP/ultimate-pixel-linux" -name '*.deb' | head -1)
+for f in "$APK" "$APPIMG" "$DEB"; do [ -n "$f" ] && [ -f "$f" ] || { echo "falta el APK, el AppImage o el .deb de $V" >&2; exit 1; }; done
 DMG=$(find "$TMP/ultimate-pixel-macos" -name '*.dmg' | head -1)
 TGZ=$(find "$TMP/ultimate-pixel-macos" -name 'UltimatePixel.app.tar.gz' | head -1)
 EXE=$(find "$TMP/ultimate-pixel-windows" -name '*-setup.exe' | head -1)
@@ -62,8 +63,7 @@ cp "$EXE" "$TMP/UltimatePixel-setup.exe"
 
 cp "$APPIMG" "$TMP/UltimatePixel.AppImage"
 sign() {   # firma para el actualizador (deja <archivo>.sig al lado)
-  docker run --rm --env-file "$S/updater.env" -v "$S/updater.key":/k/updater.key:ro -v "$(dirname "$1")":/w \
-    ultimate-pixel-tauri-build tauri signer sign -f /k/updater.key "/w/$(basename "$1")" >/dev/null
+  (set -a; . "$S/updater.env"; set +a; "$D/node_modules/.bin/tauri" signer sign -f "$S/updater.key" "$1") >/dev/null
 }
 sign "$TGZ"; sign "$TMP/UltimatePixel.AppImage"; sign "$TMP/UltimatePixel-setup.exe"
 SIG=$(cat "$TGZ.sig")

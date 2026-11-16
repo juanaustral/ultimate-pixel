@@ -1,0 +1,32 @@
+name: Linux
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  build:
+    # 22.04 para que el AppImage corra también en distros con glibc más vieja
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+            libayatana-appindicator3-dev libssl-dev libxdo-dev build-essential file
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: bash check-version.sh   # la app tiene que llevar la versión del juego
+      - run: npm install -g @tauri-apps/cli@2
+      # la firma para el actualizador la agrega release.sh en el VPS
+      - run: tauri build --bundles deb,appimage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+          NO_STRIP: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ultimate-pixel-linux
+          path: |
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/deb/*.deb
