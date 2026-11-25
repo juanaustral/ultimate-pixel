@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Ultimate Pixel: juego de Ultimate Frisbee en pixel art para navegador</title>
   <meta name="description" content="Juego de Ultimate Frisbee en pixel art para jugar en el navegador, en la compu o el celular. Reglas fieles al reglamento WFDF 2025-2028, partidos completos y ranking.">
   <meta name="author" content="Juan Martínez García">
@@ -53,20 +53,473 @@
     }
   }
   </script>
+  <!-- Sitio y juego comparten la dirección. En el navegador siempre se ve primero el sitio (pedido de
+       Juan); el juego va directo solo en la app (Tauri) y con #guia, #directo o #ajustes (revisar arte, pruebas, afinar). -->
+  <script>
+    (function () {
+      var h = location.hash;
+      if (h === '#guia' || h === '#directo' || h === '#ajustes' || '__TAURI_INTERNALS__' in window) {
+        document.documentElement.classList.add('jugando');
+        document.querySelector('meta[name=viewport]').content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
+      }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
   <style>
-    html, body { margin: 0; height: 100%; background: #0d1117; overflow: hidden; }
+    /* ---------- juego ---------- */
+    html.jugando, html.jugando body { margin: 0; height: 100%; background: #0d1117; overflow: hidden; }
+    html.jugando body { touch-action: none; -webkit-user-select: none; user-select: none; }
+    html.jugando #sitio { display: none; }
+    html:not(.jugando) #game { display: none; }
     #game { width: 100%; height: 100%; }
     canvas { image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
-    body { touch-action: none; -webkit-user-select: none; user-select: none; }
     .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+    /* ---------- sitio ---------- */
+    :root {
+      --ink: #0d1117; --night: #161b26; --navy: #1b2a5c; --navy2: #24357a;
+      --grass: #347f43; --grass-d: #2c6e3a; --grass-l: #3d8f4c; --chalk: #eef4e6;
+      --cone: #ff7a1a; --cone-d: #c4520a; --gold: #ffc23d; --gold-d: #b7791f;
+      --sky: #8fd3ff; --pink: #ff6fb0; --pink-d: #c23f80; --mint: #4fcf70; --purple: #8a5cf6;
+      --red: #d13b3b; --sand: #f3dfa5;
+      --px: 'Press Start 2P', ui-monospace, monospace;
+      --s: 3;
+    }
+    html:not(.jugando) { scroll-behavior: smooth; }
+    html:not(.jugando) body {
+      margin: 0; background: var(--navy); color: var(--chalk);
+      font: 17px/1.55 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      overflow-x: hidden;
+    }
+    #sitio * { box-sizing: border-box; }
+    #sitio img, .spr, .pix { image-rendering: pixelated; image-rendering: crisp-edges; }
+    #sitio a:not(.btn):not(.plat) { color: inherit; }
+    .px { font-family: var(--px); letter-spacing: .02em; line-height: 1.5; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+
+    /* sprites: tiras de 32×40 por cuadro (scripts/export-sitio.ts) */
+    .spr {
+      --n: 12; --d: .8s; --w: 32px; --h: 40px;
+      display: inline-block; width: calc(var(--w) * var(--s)); height: calc(var(--h) * var(--s));
+      background: var(--img) 0 0 / auto 100% no-repeat;
+      animation: spr var(--d) steps(var(--n)) infinite;
+    }
+    @keyframes spr { to { background-position-x: calc(var(--w) * var(--s) * var(--n) * -1); } }
+    .flip { transform: scaleX(-1); }
+
+    /* botones */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+      font: 14px/1.2 var(--px); text-decoration: none; text-transform: uppercase;
+      padding: 18px 22px; border: 4px solid var(--ink); cursor: pointer;
+      color: var(--ink); background: var(--gold);
+      box-shadow: 6px 6px 0 var(--ink); transition: transform .08s steps(2), box-shadow .08s steps(2);
+    }
+    .btn:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--ink); }
+    .btn:active { transform: translate(6px, 6px); box-shadow: 0 0 0 var(--ink); }
+    .btn:focus-visible { outline: 4px dashed var(--chalk); outline-offset: 4px; }
+    .btn.big { font-size: clamp(16px, 4.4vw, 22px); padding: 22px 28px; }
+    .btn.alt { background: var(--chalk); }
+    .btn.pink { background: var(--pink); }
+    .btn .pix { width: 24px; height: 12px; }
+
+    /* ----- portada (póster "Pixels": noche, montaña y disco gigante) ----- */
+    .hero { position: relative; overflow: hidden; background: linear-gradient(var(--navy) 0 55%, #3a2a6e 75%, #b04a5a 100%); padding-top: 24px; }
+    .hero::before { /* estrellas */
+      content: ''; position: absolute; inset: 0 0 40% 0; opacity: .7;
+      background-image: radial-gradient(var(--chalk) 1px, transparent 1.5px), radial-gradient(var(--gold) 1px, transparent 1.5px);
+      background-size: 53px 47px, 91px 83px; background-position: 7px 11px, 33px 29px;
+      animation: blink 2.4s steps(2) infinite;
+    }
+    @keyframes blink { 50% { opacity: .35; } }
+    .hero .wrap { position: relative; z-index: 3; }
+    .tag { display: inline-block; font: 10px/1.6 var(--px); color: var(--mint); margin: 0 0 14px; }
+    .title { margin: 0; font: clamp(40px, 12vw, 104px)/1.02 var(--px); color: var(--chalk);
+      text-shadow: 4px 4px 0 var(--cone), 8px 8px 0 var(--red), 12px 12px 0 var(--ink); }
+    .title span { display: block; color: var(--gold); }
+    .title span::after { content: '_'; animation: blink 1s steps(1) infinite; color: var(--chalk); }
+    .lead { max-width: 30em; margin: 22px 0 26px; font-size: clamp(17px, 2.4vw, 20px); }
+    .lead b { color: var(--gold); }
+    .ctas { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
+    .ctas small { display: block; width: 100%; font-size: 13px; opacity: .75; }
+    .bigdisc { position: absolute; z-index: 1; right: -40px; top: 250px; width: min(40vw, 420px); cursor: pointer;
+      animation: wobble 3s steps(6) infinite alternate; filter: drop-shadow(10px 10px 0 rgba(0,0,0,.35)); }
+    @keyframes wobble { from { transform: rotate(-8deg) translateY(0); } to { transform: rotate(6deg) translateY(16px); } }
+    .bigdisc:active { animation-play-state: paused; }
+    .atrapados { position: absolute; z-index: 4; right: 16px; top: 12px; font: 10px var(--px); color: var(--gold); text-shadow: 2px 2px 0 var(--ink); }
+    .plus { position: absolute; z-index: 5; font: 14px var(--px); color: var(--gold); text-shadow: 2px 2px 0 var(--ink); pointer-events: none; animation: plus .8s steps(8) forwards; }
+    @keyframes plus { to { transform: translateY(-60px); opacity: 0; } }
+    .andes { position: relative; z-index: 2; display: block; width: 100%; height: clamp(90px, 18vw, 200px); margin-top: 28px; }
+    .field { position: relative; z-index: 2; height: 270px; overflow: hidden;
+      background: repeating-linear-gradient(90deg, var(--grass) 0 64px, var(--grass-l) 64px 128px); border-top: 6px solid var(--chalk); }
+    .field::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: var(--grass-d); border-top: 4px solid var(--chalk); }
+    /* jugada de la portada, ciclo de 7 s: pase largo, volada en la zona, festejo y una falta que no fue */
+    .field { --T: 7s; }
+    .act { position: absolute; bottom: 30px; left: 0; width: calc(32px * var(--s)); height: calc(40px * var(--s)); }
+    .act .spr { position: absolute; left: 0; bottom: 0; }
+    .cone { position: absolute; bottom: 34px; width: 24px; height: 21px; z-index: 1; }
+    .cone.c1 { left: 24%; } .cone.c2 { right: 3%; bottom: 34px; }
+    .thrower { left: 2%; z-index: 2; }
+    .thr { animation: thr var(--T) step-end infinite; }
+    @keyframes thr {
+      0% { opacity: 1; background-position-x: 0; }
+      20% { background-position-x: calc(-32px * var(--s)); }
+      25% { background-position-x: calc(-64px * var(--s)); }
+      40% { background-position-x: 0; }
+      80% { opacity: 0; }
+    }
+    .thr-yay { opacity: 0; animation: spr .6s steps(4) infinite, show-late var(--T) step-end infinite; }
+    @keyframes show-late { 0% { opacity: 0; } 80% { opacity: 1; } }
+    .def { z-index: 1; bottom: 46px; animation: def var(--T) linear infinite; }
+    @keyframes def { 0% { left: 8%; } 48% { left: calc(58% - 70px); } 100% { left: calc(58% - 70px); } }
+    .d-run { animation: spr .7s steps(12) infinite, hide-mid var(--T) step-end infinite; }
+    .d-stop { opacity: 0; animation: spr .5s steps(2) infinite, show-mid var(--T) step-end infinite; }
+    @keyframes hide-mid { 0% { opacity: 1; } 48% { opacity: 0; } }
+    @keyframes show-mid { 0% { opacity: 0; } 48% { opacity: 1; } }
+    .rec { z-index: 3; animation: rec var(--T) linear infinite; }
+    @keyframes rec { 0% { left: 20%; } 48% { left: 58%; } 62% { left: calc(58% + 60px); } 100% { left: calc(58% + 60px); } }
+    .r-run { animation: spr .6s steps(12) infinite, hide-mid var(--T) step-end infinite; }
+    .r-lay { opacity: 0; animation: lay var(--T) step-end infinite; }
+    @keyframes lay {
+      0% { opacity: 0; } 48% { opacity: 1; background-position-x: 0; }
+      52% { background-position-x: calc(-32px * var(--s)); } 56% { background-position-x: calc(-64px * var(--s)); }
+      60% { background-position-x: calc(-96px * var(--s)); } 70% { opacity: 0; }
+    }
+    .r-up { opacity: 0; animation: up var(--T) step-end infinite; }
+    @keyframes up {
+      0% { opacity: 0; } 70% { opacity: 1; background-position-x: 0; }
+      73% { background-position-x: calc(-32px * var(--s)); } 76% { background-position-x: calc(-64px * var(--s)); }
+      79% { background-position-x: calc(-96px * var(--s)); } 82% { opacity: 0; }
+    }
+    .r-yay { opacity: 0; animation: spr .5s steps(4) infinite, yay var(--T) step-end infinite; }
+    @keyframes yay { 0% { opacity: 0; } 82% { opacity: 1; } }
+    /* el disco sale de la mano del que lanza (25 %) y llega a la volada (52 %) */
+    .fdisc { position: absolute; z-index: 4; left: 0; bottom: 0; width: calc(12px * var(--s)); height: auto; opacity: 0;
+      animation: vuela var(--T) linear infinite; }
+    @keyframes vuela {
+      0%, 24% { opacity: 0; left: calc(2% + 22px * var(--s)); bottom: calc(30px + 24px * var(--s)); }
+      25% { opacity: 1; left: calc(2% + 24px * var(--s)); bottom: calc(30px + 24px * var(--s)); }
+      38% { left: calc(30% + 20px * var(--s)); bottom: calc(30px + 46px * var(--s)); }
+      52% { opacity: 1; left: calc(58% + 30px * var(--s)); bottom: calc(30px + 16px * var(--s)); }
+      53%, 100% { opacity: 0; left: calc(58% + 30px * var(--s)); bottom: calc(30px + 16px * var(--s)); }
+    }
+    .bubble { position: absolute; z-index: 5; left: 10px; bottom: calc(40px * var(--s) + 12px); width: 190px; padding: 10px 12px;
+      background: var(--chalk); color: var(--ink); font: 10px/1.6 var(--px); border: 4px solid var(--ink); box-shadow: 4px 4px 0 var(--ink);
+      opacity: 0; animation: show-bub var(--T) step-end infinite; }
+    .bubble span { display: block; height: 0; overflow: hidden; animation: show-bub2 var(--T) step-end infinite; }
+    .bubble::after { content: ''; position: absolute; left: 18px; bottom: -16px; border: 8px solid transparent; border-top-color: var(--ink); border-left-color: var(--ink); }
+    @keyframes show-bub { 0% { opacity: 0; } 56% { opacity: 1; } 82% { opacity: 0; } }
+    /* el del otro equipo contesta cuando el defensor ya se calló */
+    .bubble.rbub { left: auto; right: 0; animation-name: show-rbub; }
+    .bubble.rbub::after { left: auto; right: 22px; border-left-color: transparent; border-right-color: var(--ink); }
+    @keyframes show-rbub { 0% { opacity: 0; } 83% { opacity: 1; } 99% { opacity: 0; } }
+    @keyframes show-bub2 { 0% { height: 0; } 68% { height: 3.2em; } }
+
+    /* cinta */
+    .ticker { overflow: hidden; background: var(--gold); color: var(--ink); border-block: 4px solid var(--ink); white-space: nowrap; }
+    .ticker div { display: inline-block; padding: 12px 0; font: 12px var(--px); animation: tick 28s linear infinite; }
+    @keyframes tick { to { transform: translateX(-50%); } }
+
+    /* secciones */
+    section { padding: 72px 0; position: relative; }
+    h2 { margin: 0 0 12px; font: clamp(20px, 5vw, 36px)/1.3 var(--px); text-shadow: 4px 4px 0 var(--ink); }
+    .kicker { font: 11px var(--px); color: var(--gold); margin: 0 0 14px; }
+    .sub { max-width: 40em; margin: 0 0 36px; }
+
+    /* por qué es especial: bloques (póster "Retro no Future") */
+    .why { background: var(--night); }
+    .cards { display: grid; gap: 110px 28px; margin-top: 100px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .card { position: relative; padding: 24px 22px 22px; color: var(--ink); border: 4px solid var(--ink);
+      box-shadow: 8px 8px 0 var(--ink); transform: translateY(30px); opacity: 0; transition: transform .5s steps(5), opacity .5s steps(5); }
+    .card.in { transform: none; opacity: 1; }
+    .card:nth-child(1) { background: var(--pink); }
+    .card:nth-child(2) { background: var(--mint); transition-delay: .15s; }
+    .card:nth-child(3) { background: var(--sky); transition-delay: .3s; }
+    .card:nth-child(4) { background: var(--gold); transition-delay: .45s; }
+    .card h3 { margin: 0 0 10px; font: 13px/1.5 var(--px); }
+    .card p { margin: 0; font-size: 16px; }
+    /* cada personaje parado arriba de su tarjeta */
+    .card .spr { position: absolute; right: 18px; bottom: 100%; margin-bottom: -4px; --s: 2.2; }
+    .card:nth-child(even) .spr { right: auto; left: 18px; }
+    .card .dato { display: block; clear: both; margin-top: 14px; padding-top: 10px; border-top: 3px dashed rgba(13,17,23,.4); font-size: 13px; font-style: italic; }
+
+    /* cómo se juega */
+    .how { background: var(--grass); background-image: repeating-linear-gradient(90deg, transparent 0 80px, rgba(255,255,255,.05) 80px 160px); }
+    .steps { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); counter-reset: paso; }
+    .step { background: var(--ink); border: 4px solid var(--chalk); padding: 20px; box-shadow: 6px 6px 0 rgba(0,0,0,.4); }
+    .step::before { counter-increment: paso; content: counter(paso); display: inline-block; font: 22px var(--px); color: var(--gold); margin-bottom: 10px; }
+    .step h3 { margin: 0 0 8px; font: 12px/1.5 var(--px); }
+    .step p { margin: 0; font-size: 16px; }
+    .step .stage { height: 120px; position: relative; margin: 6px 0 14px; background: var(--grass-d); border: 3px solid var(--grass-l); overflow: hidden; }
+    .stage .spr { position: absolute; bottom: 4px; --s: 2.4; }
+    .stage .sd { position: absolute; width: 34px; height: auto; opacity: 0; }
+    /* 1: pase (2 s). Lanza al 40 %, el disco llega al 80 %, el otro la agarra */
+    .s1a { left: 8px; animation: s1a 2s step-end infinite; }
+    @keyframes s1a { 0% { background-position-x: 0; } 30% { background-position-x: calc(-32px * var(--s)); } 40% { background-position-x: calc(-64px * var(--s)); } 75% { background-position-x: 0; } }
+    .s1b { right: 8px; animation: s1b 2s step-end infinite; }
+    @keyframes s1b { 0% { background-position-x: 0; } 78% { background-position-x: calc(-32px * var(--s)); } 95% { background-position-x: 0; } }
+    .s1d { animation: s1d 2s linear infinite; }
+    @keyframes s1d {
+      0%, 39% { opacity: 0; left: 64px; top: 52px; }
+      40% { opacity: 1; left: 64px; top: 52px; }
+      60% { left: calc(50% - 14px); top: 30px; }
+      80% { opacity: 1; left: calc(100% - 70px); top: 44px; }
+      81%, 100% { opacity: 0; left: calc(100% - 70px); top: 44px; }
+    }
+    /* 2: con el disco no se corre; el que marca cuenta */
+    .s2 { left: calc(50% - 70px); }
+    .s2m { left: calc(50% + 4px); }
+    .stall { position: absolute; left: 8px; top: 8px; font: 9px/1.5 var(--px); color: var(--ink); background: var(--gold); padding: 4px 6px; }
+    .stall::after { content: '1'; animation: stall 10s step-end infinite; }
+    @keyframes stall { 0% { content: '1'; } 10% { content: '2'; } 20% { content: '3'; } 30% { content: '4'; } 40% { content: '5'; }
+      50% { content: '6'; } 60% { content: '7'; } 70% { content: '8'; } 80% { content: '9'; } 90% { content: '10!!'; } }
+    /* 3: volada en la zona (2,6 s): el disco llega cuando estira los brazos */
+    .s3 { left: -80px; animation: s3 2.6s linear infinite, s3f 2.6s step-end infinite; }
+    @keyframes s3 { 0% { left: -80px; } 50% { left: calc(100% - 120px); } 100% { left: calc(100% - 110px); } }
+    @keyframes s3f { 0% { background-position-x: 0; } 30% { background-position-x: calc(-32px * var(--s)); }
+      42% { background-position-x: calc(-64px * var(--s)); } 52% { background-position-x: calc(-96px * var(--s)); } }
+    .s3d { animation: s3d 2.6s linear infinite; }
+    @keyframes s3d {
+      0% { opacity: 1; left: 10px; top: 4px; }
+      45% { opacity: 1; left: calc(100% - 46px); top: 66px; }
+      46%, 100% { opacity: 0; left: calc(100% - 46px); top: 66px; }
+    }
+    .gol { position: absolute; left: 8px; top: 8px; font: 9px var(--px); color: var(--gold); opacity: 0; animation: gol 2.6s step-end infinite; }
+    @keyframes gol { 0% { opacity: 0; } 50% { opacity: 1; } }
+    .ez { position: absolute; right: 0; top: 0; bottom: 0; width: 70px; background: repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 8px, transparent 8px 16px); border-left: 3px solid var(--chalk); }
+    .warn { margin: 34px 0 0; text-align: center; }
+    .warn span { display: inline-block; padding: 14px 18px; font: 11px/1.7 var(--px); background: var(--cone); color: var(--ink); border: 4px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); transform: rotate(-2deg); }
+
+    /* descargas */
+    .dl { background: var(--navy2); }
+    .plats { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 28px; }
+    .plat { display: block; padding: 20px; text-decoration: none; background: var(--chalk); color: var(--ink); border: 4px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); transition: transform .08s steps(2); }
+    .plat:hover { transform: translate(-2px, -2px) rotate(-1deg); }
+    .plat b { display: block; font: 14px/1.5 var(--px); margin-bottom: 6px; }
+    .plat small { font-size: 14px; }
+    .plat.yo { background: var(--gold); outline: 4px dashed var(--chalk); outline-offset: 6px; }
+    .plat.yo b::after { content: ' < VOS'; color: var(--red); }
+    .ios { font-size: 15px; opacity: .85; }
+
+    /* comunidad (póster "Vintage": bloque plano y letras enormes) */
+    .comu { background: var(--pink); color: var(--ink); overflow: hidden; }
+    .comu h2 { font-size: clamp(26px, 6vw, 52px); color: var(--chalk); text-shadow: 4px 4px 0 var(--ink), 8px 8px 0 var(--pink-d); }
+    .comu .grid { display: grid; gap: 30px; grid-template-columns: 1fr; align-items: center; }
+    @media (min-width: 820px) { .comu .grid { grid-template-columns: 1.2fr 1fr; } }
+    .comu p { font-size: 18px; max-width: 32em; }
+    .team { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 24px 12px 0; background: var(--grass); border: 4px solid var(--ink); box-shadow: 10px 10px 0 var(--ink); }
+    .team .spr { --s: 2.6; }
+    .team .cap { width: 100%; text-align: center; font: 10px/1.6 var(--px); color: var(--chalk); background: var(--ink); margin: 14px -12px 0; padding: 10px; }
+
+    /* pie con perro */
+    footer { position: relative; background: var(--ink); padding: 90px 0 40px; overflow: hidden; font-size: 15px; }
+    .dog { position: absolute; top: 18px; left: -120px; width: 80px; animation: perro 7s linear infinite; }
+    .dog svg { width: 100%; height: auto; }
+    .dog .f2 { display: none; }
+    .dog.run .f1 { animation: f1 .3s steps(1) infinite; } .dog.run .f2 { display: block; animation: f2 .3s steps(1) infinite; }
+    @keyframes f1 { 50% { visibility: hidden; } } @keyframes f2 { 0% { visibility: hidden; } 50% { visibility: visible; } }
+    .dog .f1, .dog .f2 { position: absolute; top: 0; left: 0; }
+    .dog { height: 60px; }
+    @keyframes perro { to { left: calc(100% + 40px); } }
+    .chaser { position: absolute; top: 4px; left: -260px; --s: 1.9; animation: perro 7s linear infinite; }
+    footer .row { display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: space-between; align-items: center; }
+    footer .px { font-size: 10px; color: var(--gold); }
+    footer a { color: var(--sky) !important; }
+    .caption { font: 9px/1.6 var(--px); color: var(--muted, #9aa4b1); margin: 0 0 28px; }
+
+    @media (min-width: 820px) {
+      :root { --s: 4; }
+      .hero { padding-top: 60px; }
+      .field { height: 330px; }
+      section { padding: 100px 0; }
+    }
+    @media (max-width: 600px) {
+      .bigdisc { top: -30px; right: -90px; opacity: .55; }
+      .bubble { width: 150px; font-size: 9px; padding: 8px 10px; }
+      .title { font-size: 11vw; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #sitio *, #sitio *::before, #sitio *::after { animation: none !important; transition: none !important; }
+      .card { opacity: 1; transform: none; }
+      .bubble { opacity: 1; }
+    }
   </style>
-  <script type="module" crossorigin src="./assets/index-wljt1FYg.js"></script>
+  <script type="module" crossorigin src="./assets/index-DDCYxlJP.js"></script>
 </head>
 <body>
-  <h1 class="sr-only">Ultimate Pixel, juego de Ultimate Frisbee en pixel art para navegador</h1>
   <noscript>
     <p>Ultimate Pixel es un juego de Ultimate Frisbee en pixel art que se juega en el navegador. Para jugar hace falta activar JavaScript.</p>
   </noscript>
+
+  <div id="sitio">
+    <header class="hero">
+      <span class="atrapados" id="atrapados" hidden></span>
+      <svg class="bigdisc pix" id="bigdisc" viewBox="0 0 24 12" role="img" aria-label="Un disco gigante. Tocalo." data-pix="disc"></svg>
+      <div class="wrap">
+        <p class="tag">HECHO EN MENDOZA · GRATIS · 7 VS 7</p>
+        <h1 class="title">ULTIMATE<span>PIXEL</span></h1>
+        <p class="lead">Un juego de <b>Ultimate Frisbee</b> en pixel art: pasás el disco, te tirás de volada y metés hammers. Lo jugás en el navegador del celu o de la compu, <b>sin instalar nada</b>.</p>
+        <div class="ctas">
+          <button class="btn big" data-jugar type="button">JUGAR ONLINE &gt;</button>
+          <a class="btn alt" href="#descargar">DESCARGAR</a>
+          <small>Es gratis. Sin cuenta jugás contra la compu; para el ranking y el online te hacés una con nombre y contraseña.</small>
+        </div>
+      </div>
+      <svg class="andes pix" viewBox="0 0 160 24" preserveAspectRatio="none" aria-hidden="true" data-pix="andes"></svg>
+      <div class="field" aria-hidden="true">
+        <svg class="cone c1 pix" data-pix="cone"></svg>
+        <svg class="cone c2 pix" data-pix="cone"></svg>
+        <div class="act thrower">
+          <span class="spr thr" style="--img:url(sitio/throw-2.png)"></span>
+          <span class="spr thr-yay" style="--img:url(sitio/celebrate-2.png);--n:4"></span>
+        </div>
+        <div class="act def">
+          <span class="spr d-run" style="--img:url(sitio/runSide-5.png)"></span>
+          <span class="spr d-stop" style="--img:url(sitio/mark-5.png);--n:2;--d:.5s"></span>
+          <div class="bubble">FALTA!!<span>...no, mentira....</span></div>
+        </div>
+        <div class="act rec">
+          <span class="spr r-run" style="--img:url(sitio/runSide-3.png)"></span>
+          <span class="spr r-lay" style="--img:url(sitio/layout-3.png);--n:4"></span>
+          <span class="spr r-up" style="--img:url(sitio/getup-3.png);--n:4"></span>
+          <span class="spr r-yay" style="--img:url(sitio/celebrate-3.png);--n:4"></span>
+          <div class="bubble rbub">Eh! Qué flojo de espíritu!</div>
+        </div>
+        <svg class="fdisc pix" data-pix="minidisc"></svg>
+      </div>
+    </header>
+
+    <div class="ticker" aria-hidden="true"><div>
+      + 7 VS 7 EN PASTO + REGLAMENTO WFDF + VOLADAS + TIRO FLOTADO + HAMMER · SCOOBER · BLADE + SPRINT + RANKING ONLINE + ARMA TU EQUIPO + DISCOS PERDIDOS EN EL TECHO: 0 (VENTAJAS DE SER UN JUEGO) +&nbsp;
+      + 7 VS 7 EN PASTO + REGLAMENTO WFDF + VOLADAS + TIRO FLOTADO + HAMMER · SCOOBER · BLADE + SPRINT + RANKING ONLINE + ARMA TU EQUIPO + DISCOS PERDIDOS EN EL TECHO: 0 (VENTAJAS DE SER UN JUEGO) +&nbsp;
+    </div></div>
+
+    <main>
+      <section class="why">
+        <div class="wrap">
+          <p class="kicker">// POR QUE ES ESPECIAL</p>
+          <h2>Hay mil juegos de fútbol.<br>De Ultimate, casi ninguno.</h2>
+          <p class="sub">Así que hicimos uno, con el reglamento oficial y los mismos tiros que en la cancha. La cara de felicidad cuando la agarrás en la zona viene incluida.</p>
+          <div class="cards">
+            <article class="card">
+              <span class="spr" style="--img:url(sitio/celebrate-0.png);--n:4;--d:.6s"></span>
+              <h3>RARISIMO (EN EL BUEN SENTIDO)</h3>
+              <p>Hay muy pocos videojuegos de Ultimate Frisbee, y de Mendoza no conocemos otro.</p>
+              <span class="dato">Dato inútil: el disco pesa 175 g. En el juego, 0.</span>
+            </article>
+            <article class="card">
+              <span class="spr" style="--img:url(sitio/idleFront-2.png);--n:2;--d:1s"></span>
+              <h3>REGLAMENTO WFDF</h3>
+              <p>Arrancás con el pull, tenés 10 segundos de stall y hay turnover si el disco cae, sale afuera o te lo bloquean.</p>
+              <span class="dato">Si la agarrás de volada en la zona, el juego te grita GOLAZO DE VOLADA.</span>
+            </article>
+            <article class="card">
+              <span class="spr" style="--img:url(sitio/throw-0.png);--n:3;--d:.7s"></span>
+              <h3>LOS TIROS</h3>
+              <p>Cargás la potencia, apuntás y rezás. Con la barra casi llena sale flotado, y en modo avanzado tirás hammer y scoober.</p>
+              <span class="dato">El hammer llega a 30 m. Tu dignidad, menos.</span>
+            </article>
+            <article class="card">
+              <span class="spr" style="--img:url(sitio/catchFront-1.png);--n:2;--d:.6s"></span>
+              <h3>CONTRA LA COMPU O ONLINE</h3>
+              <p>Partidos completos, tutorial, ranking y 8 equipos para elegir, o armás el tuyo con tus colores. Para jugar online, invitás a alguien que esté conectado.</p>
+              <span class="dato">Se juega con teclado y mouse o con el dedo, y las teclas las elegís vos.</span>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="how">
+        <div class="wrap">
+          <p class="kicker">// COMO SE JUEGA EN 10 SEGUNDOS</p>
+          <h2>Tres reglas.<br>Ni una más.</h2>
+          <p class="sub">Bueno, hay más, pero con estas ya arrancás.</p>
+          <div class="steps">
+            <div class="step">
+              <div class="stage">
+                <span class="spr s1a" style="--img:url(sitio/throw-0.png);--n:3"></span>
+                <svg class="sd s1d pix" data-pix="minidisc"></svg>
+                <span class="spr s1b flip" style="--img:url(sitio/catchFront-1.png);--n:2"></span>
+              </div>
+              <h3>PASA EL DISCO</h3>
+              <p>El disco avanza solo con pases: apuntás, cargás la potencia y soltás.</p>
+            </div>
+            <div class="step">
+              <div class="stage">
+                <span class="spr s2" style="--img:url(sitio/holdFront-0.png);--n:2;--d:.9s"></span><span class="spr s2m flip" style="--img:url(sitio/mark-5.png);--n:2;--d:.4s"></span><span class="stall">STALL </span>
+              </div>
+              <h3>CON EL DISCO NO SE CORRE</h3>
+              <p>Tenés 10 segundos para pasarla, y el que te marca va contando.</p>
+            </div>
+            <div class="step">
+              <div class="stage">
+                <div class="ez"></div>
+                <svg class="sd s3d pix" data-pix="minidisc"></svg>
+                <span class="spr s3" style="--img:url(sitio/layout-3.png);--n:4"></span><span class="gol">GOL!</span>
+              </div>
+              <h3>ATRAPALA EN LA ZONA</h3>
+              <p>Si la agarrás en la zona de gol, es punto. Si es con volada, es punto y gloria.</p>
+            </div>
+          </div>
+          <p class="warn"><span>LA VOLADA EN ASFALTO<br>NO SE RECOMIENDA. CONFIA.</span></p>
+        </div>
+      </section>
+
+      <section class="dl" id="descargar">
+        <div class="wrap">
+          <p class="kicker">// DESCARGAR</p>
+          <h2>Llevalo puesto.</h2>
+          <p class="sub">Es el mismo juego del navegador, instalado. Cuando sale una versión nueva, la app te avisa.</p>
+          <div class="plats">
+            <a class="plat" data-os="android" href="https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Android.apk"><b>ANDROID</b><small>APK · Android 7 o más nuevo</small></a>
+            <a class="plat" data-os="windows" href="https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Windows.exe"><b>WINDOWS</b><small>Windows 10 y 11 · 64 bits</small></a>
+            <a class="plat" data-os="mac" href="https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Mac.dmg"><b>MAC</b><small>Intel y Apple Silicon · macOS 11+</small></a>
+            <a class="plat" data-os="linux" href="https://github.com/juanaustral/ultimate-pixel/releases/latest/download/UltimatePixel-Linux.AppImage"><b>LINUX</b><small>AppImage · x86_64 (<span class="u">también hay .deb</span>)</small></a>
+          </div>
+          <p class="ios">¿iPhone? Tocá <b>Jugar online</b> y después Compartir → <b>Agregar a inicio</b>: queda como app, en pantalla completa. Todas las versiones en <a href="https://github.com/juanaustral/ultimate-pixel/releases">GitHub</a>.</p>
+          <p><button class="btn" data-jugar type="button">O JUGA YA, ACA</button></p>
+        </div>
+      </section>
+
+      <section class="comu">
+        <div class="wrap grid">
+          <div>
+            <p class="kicker" style="color:var(--ink)">// ESTO EXISTE DE VERDAD</p>
+            <h2>SALI DE LA PANTALLA.</h2>
+            <p>El Ultimate Frisbee es un deporte de verdad: mixto, sin contacto y sin árbitro. En Mendoza hay una comunidad que entrena y siempre recibe gente nueva. Para arrancar no necesitás saber tirar; con ganas y zapatillas alcanza.</p>
+            <p><a class="btn" href="https://www.instagram.com/ultimatefrisbeemza/" target="_blank" rel="noopener">@ULTIMATEFRISBEEMZA</a></p>
+          </div>
+          <div class="team" aria-hidden="true">
+            <span class="spr" style="--img:url(sitio/celebrate-2.png);--n:4;--d:.6s"></span>
+            <span class="spr" style="--img:url(sitio/celebrate-4.png);--n:4;--d:.7s"></span>
+            <span class="spr" style="--img:url(sitio/idleFront-1.png);--n:2;--d:1.2s"></span>
+            <span class="spr" style="--img:url(sitio/celebrate-5.png);--n:4;--d:.5s"></span>
+            <span class="spr" style="--img:url(sitio/idleFront-3.png);--n:2;--d:.9s"></span>
+            <span class="cap">FALTAS VOS. SI, VOS.</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span class="spr chaser" style="--img:url(sitio/runSide-4.png)"></span>
+      <div class="dog run" aria-hidden="true">
+        <svg class="f1 pix" viewBox="0 0 24 12" data-pix="dog1"></svg>
+        <svg class="f2 pix" viewBox="0 0 24 12" data-pix="dog2"></svg>
+      </div>
+      <div class="wrap">
+        <p class="caption">TODO EQUIPO DE ULTIMATE TIENE UN PERRO QUE SE CREE JUGADOR.</p>
+        <div class="row">
+          <span class="px">ULTIMATE PIXEL</span>
+          <span>Hecho con cariño por <a href="https://juanmartinezgarcia.com" target="_blank" rel="noopener">Juan Martínez García</a> · <a href="https://www.instagram.com/ultimatefrisbeemza/" target="_blank" rel="noopener">Ultimate Mendoza</a></span>
+          <span>Árbitros en este sitio: 0</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
   <div id="game"></div>
 </body>
 </html>
