@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Ultimate Pixel: juego de Ultimate Frisbee en pixel art para navegador</title>
-  <meta name="description" content="Juego de Ultimate Frisbee en pixel art para jugar en el navegador, en la compu o el celular. Reglas fieles al reglamento WFDF 2025-2028, partidos completos y ranking.">
+  <meta name="description" content="Juego de Ultimate Frisbee en pixel art para jugar en el navegador, en la compu o el celular. Reglas fieles al reglamento WFDF 2025-2028, partidos completos, ranking y joystick.">
   <meta name="author" content="Juan Martínez García">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <link rel="canonical" href="https://iona.ar/ultimatepixel/">
@@ -50,6 +50,11 @@
       "@type": "Person",
       "name": "Juan Martínez García",
       "url": "https://juanmartinezgarcia.com"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "IONA",
+      "url": "https://iona.ar/"
     }
   }
   </script>
@@ -156,12 +161,14 @@
       background: repeating-linear-gradient(90deg, var(--grass) 0 64px, var(--grass-l) 64px 128px); border-top: 6px solid var(--chalk); }
     .field::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: var(--grass-d); border-top: 4px solid var(--chalk); }
     /* jugada de la portada, ciclo de 7 s: pase largo, volada en la zona, festejo y una falta que no fue */
-    .field { --T: 7s; }
+    .field { --T: 7s; --d0: calc(2% + 24px * var(--s)); --r0: calc(2% + 40px * var(--s)); }
+    /* al cerrar el ciclo todos desaparecen un instante y vuelven a sus puestos (antes se teletransportaban) */
+    @keyframes ciclo { 0% { opacity: 0; } 2% { opacity: 1; } 97% { opacity: 0; } }
     .act { position: absolute; bottom: 30px; left: 0; width: calc(32px * var(--s)); height: calc(40px * var(--s)); }
     .act .spr { position: absolute; left: 0; bottom: 0; }
     .cone { position: absolute; bottom: 34px; width: 24px; height: 21px; z-index: 1; }
     .cone.c1 { left: 24%; } .cone.c2 { right: 3%; bottom: 34px; }
-    .thrower { left: 2%; z-index: 2; }
+    .thrower { left: 2%; z-index: 2; animation: ciclo var(--T) step-end infinite; }
     .thr { animation: thr var(--T) step-end infinite; }
     @keyframes thr {
       0% { opacity: 1; background-position-x: 0; }
@@ -172,14 +179,14 @@
     }
     .thr-yay { opacity: 0; animation: spr .6s steps(4) infinite, show-late var(--T) step-end infinite; }
     @keyframes show-late { 0% { opacity: 0; } 80% { opacity: 1; } }
-    .def { z-index: 1; bottom: 46px; animation: def var(--T) linear infinite; }
-    @keyframes def { 0% { left: 8%; } 48% { left: calc(58% - 70px); } 100% { left: calc(58% - 70px); } }
+    .def { z-index: 1; bottom: 46px; animation: def var(--T) linear infinite, ciclo var(--T) step-end infinite; }
+    @keyframes def { 0% { left: var(--d0); } 48% { left: calc(58% - 70px); } 100% { left: calc(58% - 70px); } }
     .d-run { animation: spr .7s steps(12) infinite, hide-mid var(--T) step-end infinite; }
     .d-stop { opacity: 0; animation: spr .5s steps(2) infinite, show-mid var(--T) step-end infinite; }
     @keyframes hide-mid { 0% { opacity: 1; } 48% { opacity: 0; } }
     @keyframes show-mid { 0% { opacity: 0; } 48% { opacity: 1; } }
-    .rec { z-index: 3; animation: rec var(--T) linear infinite; }
-    @keyframes rec { 0% { left: 20%; } 48% { left: 58%; } 62% { left: calc(58% + 60px); } 100% { left: calc(58% + 60px); } }
+    .rec { z-index: 3; animation: rec var(--T) linear infinite, ciclo var(--T) step-end infinite; }
+    @keyframes rec { 0% { left: var(--r0); } 48% { left: 58%; } 62% { left: calc(58% + 60px); } 100% { left: calc(58% + 60px); } }
     .r-run { animation: spr .6s steps(12) infinite, hide-mid var(--T) step-end infinite; }
     .r-lay { opacity: 0; animation: lay var(--T) step-end infinite; }
     @keyframes lay {
@@ -276,10 +283,14 @@
     @keyframes stall { 0% { content: '1'; } 10% { content: '2'; } 20% { content: '3'; } 30% { content: '4'; } 40% { content: '5'; }
       50% { content: '6'; } 60% { content: '7'; } 70% { content: '8'; } 80% { content: '9'; } 90% { content: '10!!'; } }
     /* 3: volada en la zona (2,6 s): el disco llega cuando estira los brazos */
-    .s3 { left: -80px; animation: s3 2.6s linear infinite, s3f 2.6s step-end infinite; }
+    .s3 { position: absolute; bottom: 4px; left: -80px; width: calc(32px * 2.4); height: calc(40px * 2.4); animation: s3 2.6s linear infinite; }
+    .stage .s3 .spr { bottom: 0; left: 0; }
     @keyframes s3 { 0% { left: -80px; } 50% { left: calc(100% - 120px); } 100% { left: calc(100% - 110px); } }
-    @keyframes s3f { 0% { background-position-x: 0; } 30% { background-position-x: calc(-32px * var(--s)); }
-      42% { background-position-x: calc(-64px * var(--s)); } 52% { background-position-x: calc(-96px * var(--s)); } }
+    .s3r { animation: spr .5s steps(12) infinite, s3r 2.6s step-end infinite; }
+    @keyframes s3r { 0% { opacity: 1; } 28% { opacity: 0; } }
+    .s3f { opacity: 0; animation: s3f 2.6s step-end infinite; }
+    @keyframes s3f { 0% { opacity: 0; background-position-x: 0; } 28% { opacity: 1; } 36% { background-position-x: calc(-32px * var(--s)); }
+      44% { background-position-x: calc(-64px * var(--s)); } 52% { background-position-x: calc(-96px * var(--s)); } }
     .s3d { animation: s3d 2.6s linear infinite; }
     @keyframes s3d {
       0% { opacity: 1; left: 10px; top: 4px; }
@@ -322,8 +333,9 @@
     @keyframes f1 { 50% { visibility: hidden; } } @keyframes f2 { 0% { visibility: hidden; } 50% { visibility: visible; } }
     .dog .f1, .dog .f2 { position: absolute; top: 0; left: 0; }
     .dog { height: 60px; }
-    @keyframes perro { to { left: calc(100% + 40px); } }
-    .chaser { position: absolute; top: 4px; left: -260px; --s: 1.9; animation: perro 7s linear infinite; }
+    /* perro y perseguidor cruzan la misma distancia: la distancia entre los dos no se achica */
+    @keyframes perro { to { transform: translateX(calc(100vw + 320px)); } }
+    .chaser { position: absolute; top: 4px; left: -260px; --s: 1.9; animation: spr .55s steps(12) infinite, perro 7s linear infinite; }
     footer .row { display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: space-between; align-items: center; }
     footer .px { font-size: 10px; color: var(--gold); }
     footer a { color: var(--sky) !important; }
@@ -346,7 +358,7 @@
       .bubble { opacity: 1; }
     }
   </style>
-  <script type="module" crossorigin src="./assets/index-DDCYxlJP.js"></script>
+  <script type="module" crossorigin src="./assets/index-DVl7-Vi6.js"></script>
 </head>
 <body>
   <noscript>
@@ -392,8 +404,8 @@
     </header>
 
     <div class="ticker" aria-hidden="true"><div>
-      + 7 VS 7 EN PASTO + REGLAMENTO WFDF + VOLADAS + TIRO FLOTADO + HAMMER · SCOOBER · BLADE + SPRINT + RANKING ONLINE + ARMA TU EQUIPO + DISCOS PERDIDOS EN EL TECHO: 0 (VENTAJAS DE SER UN JUEGO) +&nbsp;
-      + 7 VS 7 EN PASTO + REGLAMENTO WFDF + VOLADAS + TIRO FLOTADO + HAMMER · SCOOBER · BLADE + SPRINT + RANKING ONLINE + ARMA TU EQUIPO + DISCOS PERDIDOS EN EL TECHO: 0 (VENTAJAS DE SER UN JUEGO) +&nbsp;
+      + 7 VS 7 EN PASTO + REGLAMENTO WFDF + VOLADAS + TIRO FLOTADO + HAMMER · SCOOBER · BLADE + RIVALES QUE LEEN EL JUEGO + JOYSTICK + RANKING ONLINE + ARMA TU EQUIPO + REVANCHA + DISCOS PERDIDOS EN EL TECHO: 0 (VENTAJAS DE SER UN JUEGO) +&nbsp;
+      + 7 VS 7 EN PASTO + REGLAMENTO WFDF + VOLADAS + TIRO FLOTADO + HAMMER · SCOOBER · BLADE + RIVALES QUE LEEN EL JUEGO + JOYSTICK + RANKING ONLINE + ARMA TU EQUIPO + REVANCHA + DISCOS PERDIDOS EN EL TECHO: 0 (VENTAJAS DE SER UN JUEGO) +&nbsp;
     </div></div>
 
     <main>
@@ -418,14 +430,14 @@
             <article class="card">
               <span class="spr" style="--img:url(sitio/throw-0.png);--n:3;--d:.7s"></span>
               <h3>LOS TIROS</h3>
-              <p>Cargás la potencia, apuntás y rezás. Con la barra casi llena sale flotado, y en modo avanzado tirás hammer y scoober.</p>
+              <p>Cargás la potencia, apuntás y rezás. El disco se frena, curva y cae como uno de verdad. Con la barra casi llena sale flotado, y con los tiros avanzados metés hammer y scoober, cada uno con su vuelo.</p>
               <span class="dato">El hammer llega a 30 m. Tu dignidad, menos.</span>
             </article>
             <article class="card">
               <span class="spr" style="--img:url(sitio/catchFront-1.png);--n:2;--d:.6s"></span>
               <h3>CONTRA LA COMPU O ONLINE</h3>
-              <p>Partidos completos, tutorial, ranking y 8 equipos para elegir, o armás el tuyo con tus colores. Para jugar online, invitás a alguien que esté conectado.</p>
-              <span class="dato">Se juega con teclado y mouse o con el dedo, y las teclas las elegís vos.</span>
+              <p>Partidos completos contra una compu que lee el juego, tutorial, ranking y 8 equipos para elegir, o armás el tuyo con tus colores. Al final, estadísticas, MVP y revancha. Para jugar online, invitás a alguien que esté conectado.</p>
+              <span class="dato">Se juega con teclado y mouse, con joystick o con el dedo, y las teclas las elegís vos.</span>
             </article>
           </div>
         </div>
@@ -457,7 +469,7 @@
               <div class="stage">
                 <div class="ez"></div>
                 <svg class="sd s3d pix" data-pix="minidisc"></svg>
-                <span class="spr s3" style="--img:url(sitio/layout-3.png);--n:4"></span><span class="gol">GOL!</span>
+                <div class="s3"><span class="spr s3r" style="--img:url(sitio/runSide-3.png)"></span><span class="spr s3f" style="--img:url(sitio/layout-3.png);--n:4"></span></div><span class="gol">GOL!</span>
               </div>
               <h3>ATRAPALA EN LA ZONA</h3>
               <p>Si la agarrás en la zona de gol, es punto. Si es con volada, es punto y gloria.</p>
@@ -488,7 +500,7 @@
           <div>
             <p class="kicker" style="color:var(--ink)">// ESTO EXISTE DE VERDAD</p>
             <h2>SALI DE LA PANTALLA.</h2>
-            <p>El Ultimate Frisbee es un deporte de verdad: mixto, sin contacto y sin árbitro. En Mendoza hay una comunidad que entrena y siempre recibe gente nueva. Para arrancar no necesitás saber tirar; con ganas y zapatillas alcanza.</p>
+            <p>El Ultimate Frisbee es un deporte de verdad: mixto, sin contacto y autoarbitrado. Los mismos jugadores cobran las faltas y las resuelven entre ellos, con espíritu de juego. En Mendoza hay una comunidad que entrena y siempre recibe gente nueva. Para arrancar no necesitás saber tirar; con ganas y zapatillas alcanza.</p>
             <p><a class="btn" href="https://www.instagram.com/ultimatefrisbeemza/" target="_blank" rel="noopener">@ULTIMATEFRISBEEMZA</a></p>
           </div>
           <div class="team" aria-hidden="true">
@@ -513,8 +525,8 @@
         <p class="caption">TODO EQUIPO DE ULTIMATE TIENE UN PERRO QUE SE CREE JUGADOR.</p>
         <div class="row">
           <span class="px">ULTIMATE PIXEL</span>
-          <span>Hecho con cariño por <a href="https://juanmartinezgarcia.com" target="_blank" rel="noopener">Juan Martínez García</a> · <a href="https://www.instagram.com/ultimatefrisbeemza/" target="_blank" rel="noopener">Ultimate Mendoza</a></span>
-          <span>Árbitros en este sitio: 0</span>
+          <span>Hecho con cariño por <a href="https://juanmartinezgarcia.com" target="_blank" rel="noopener">Juan Martínez García</a> · <a href="https://www.instagram.com/ultimatefrisbeemza/" target="_blank" rel="noopener">Ultimate Mendoza</a> · Un proyecto de <a href="https://iona.ar/" target="_blank" rel="noopener">IONA.AR</a></span>
+          <span>Este sitio también es autoarbitrado.</span>
         </div>
       </div>
     </footer>
